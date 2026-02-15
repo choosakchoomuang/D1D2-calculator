@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D2 Safety clearance calculator</title>
+    <style>
+        :root {
+            --md-primary: #1a73e8;
+            --md-secondary: #5f6368;
+            --status-pass-bg: #1e8e3e;
+            --status-fail-bg: #d93025;
+            --md-surface: #f2f2f2;
+            --analysis-bg: #3c4043;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
+            background-color: var(--md-surface); 
+            margin: 0; padding-bottom: 20px; font-size: 18px; 
+        }
+        .app-bar { background: #ffffff; padding: 20px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .app-bar h1 { font-size: 22px; margin: 0; color: #000; font-weight: bold; }
+        
+        .content { padding: 15px; display: flex; justify-content: center; }
+        .page { width: 100%; max-width: 500px; }
+        
+        .card { background: white; border-radius: 20px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        
+        .img-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px; }
+        .img-box { background: #eee; border-radius: 12px; height: 250px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #ccc; }
+        .img-box img { width: 100%; height: 100%; object-fit: contain; }
+
+        .field { margin-bottom: 18px; }
+        label { display: block; font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #333; }
+        input, select { 
+            width: 100%; padding: 16px; border: 2px solid #555; border-radius: 12px; 
+            font-size: 20px; font-weight: bold; box-sizing: border-box; outline: none; background: #fff; color: #000;
+        }
+        .readonly-field { background-color: #e9ecef; color: var(--md-primary); border: 2px solid #ccc; }
+
+        .btn-calc {
+            width: 100%; padding: 20px; background-color: var(--md-primary); color: white;
+            border: none; border-radius: 15px; font-size: 22px; font-weight: bold;
+            cursor: pointer; margin: 15px 0; box-shadow: 0 4px 10px rgba(26, 115, 232, 0.3);
+        }
+        .btn-ana {
+            width: 100%; padding: 15px; background-color: var(--md-secondary); color: white;
+            border: none; border-radius: 12px; font-size: 18px; font-weight: bold;
+            cursor: pointer; margin-top: 10px;
+        }
+
+        .value-display { 
+            background: #000; border-radius: 15px; padding: 20px; text-align: center; 
+            margin-top: 15px; color: #fff; transition: background 0.3s ease;
+        }
+        .value-display .number { font-size: 45px; font-weight: 900; }
+        .calc-details { font-size: 14px; line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; margin-top: 10px; font-family: monospace; }
+        
+        .analysis-section { display: none; margin-top: 20px; padding-top: 20px; border-top: 2px solid #eee; background: #f9f9f9; padding: 15px; border-radius: 15px; }
+        .analysis-display { border-radius: 15px; padding: 20px; font-size: 16px; line-height: 1.6; color: white; margin-top: 15px; font-weight: normal; }
+        
+        .pass { background: var(--status-pass-bg) !important; }
+        .fail { background: var(--status-fail-bg) !important; }
+
+        .modal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
+            width: 100%; height: 100%; background-color: rgba(0,0,0,0.85);
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background-color: white; border-radius: 40px; padding: 40px;
+            width: 85%; max-width: 400px; text-align: center;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-number { font-size: 100px; font-weight: 900; margin: 10px 0; }
+        .btn-close { background: #333; color: white; border: none; padding: 15px; border-radius: 12px; font-size: 18px; font-weight: bold; width: 100%; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-bar"><h1>D2 Calculator (MRL)</h1></div>
+
+    <div class="content">
+        <div id="page1" class="page">
+            <div class="card">
+                <div class="img-grid">
+                    <div class="img-box"><img src="image/layout-d1.jpeg" alt="D1 Layout Diagram"></div>
+                    <div class="img-box"><img src="image/layout-d2.jpeg" alt="D2 Layout Diagram"></div>
+                </div>
+                <div class="field">
+                    <label>ETSL slowdown system</label>
+                    <select id="sys1" onchange="updateVknOptions(1)">
+                        <option value="NO">ไม่มี ETSL</option>
+                        <option value="YES">มี ETSL</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>ความเร็วลิฟต์ VKN (m/s)</label>
+                    <select id="vkn1" onchange="updateSgsValue(1)">
+                        <option value="">-- เลือกความเร็ว VKN --</option>
+                        <option value="0.63">0.63</option><option value="0.80">0.80</option>
+                        <option value="1.00">1.00</option><option value="1.50">1.50</option>
+                        <option value="1.60">1.60</option><option value="1.75">1.75</option>
+                        <option value="2.00">2.00</option><option value="2.50">2.50</option>
+                        <option value="3.00">3.00</option>
+                    </select>
+                </div>
+                <div class="field"><label>SKSG Jump (mm)</label><input type="number" id="sgs1" class="readonly-field" readonly placeholder="Auto"></div>
+                <div class="field"><label>HKP ระยะรันบายลิฟต์ที่วัดได้ (mm)</label><input type="number" id="hkp1" placeholder="ระยะรันบายลิฟต์ที่วัดได้"></div>
+                <div class="field"><label>HPHK ระยะยุบของบัฟเฟอร์ลิฟต์ ดูจากแบบ/เนมเพลทบัฟเฟอร์ลิฟต์ (mm)</label><input type="number" id="hphk1" placeholder="ดูจากแบบ/เนมเพลทบัฟเฟอร์ลิฟต์"></div>
+                <div class="field"><label>ระยะ D2 วัดจากปลายสายพานถึงพูเล่โครงเวท ขณะที่ิลิฟต์จอดล่างสุด โครงเวทขึ้นบนสุด (วิธีเช็คตามรูปด้านบน) (mm)</label><input type="number" id="act1" placeholder="วิธีเช็คตามรูปด้านบน"></div>
+
+                <button class="btn-calc" onclick="runCalc1()">กดปุ่มนี้เพื่อคำนวณระยะD2</button>
+
+                <div class="value-display" id="disp1">
+                    <div id="num1" class="number" style="font-size: 18px;">เลือกVKNแล้วใส่ค่าHKP,HPHK ให้ครบแล้วกดปุ่มคำนวณระยะD2</div>
+                    <div class="calc-details" id="formula1" style="display:none;"></div>
+                </div>
+
+                <div id="analysisSection1" class="analysis-section">
+                    <h3 style="margin-top:0; color:#d93025;">🛠 แนวทางการแก้ไขระยะ (D2)</h3>
+                    <div class="field"><label>ระยะปลายสายพานที่เหลือปัจจุบัน (mm)</label><input type="number" id="stm_len" placeholder="ระบุระยะสายพานที่เหลือ"></div>
+                    <div class="field"><label>HKP ต่ำสุดในแบบระบุ (mm)</label><input type="number" id="hkp_min1" placeholder="HKP ต่ำสุดในแบบระบุ"></div>
+                    <div class="field"><label>HKP สูงสุดในแบบระบุ (mm)</label><input type="number" id="hkp_max1" placeholder="HKP สูงสุดในแบบระบุ"></div>
+                    
+                    <button class="btn-ana" onclick="analyzeD2()"> กดปุ่มนี้เพื่อคำนวณระยะแก้ไข(D2)</button>
+                    <div id="ana1" class="analysis-display" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="popModal" class="modal">
+        <div class="modal-content">
+            <div id="popTitle" style="font-weight:bold; color:#666; font-size: 24px;">ระยะปลอดภัย</div>
+            <div id="popNum" class="modal-number">0.0</div>
+            <div id="popStatus" style="font-weight:bold; margin-bottom:15px; font-size: 20px;">-</div>
+            <button class="btn-close" onclick="closePop()">CLOSE</button>
+        </div>
+    </div>
+
+    <script>
+        const sgsTable = { "0.63":14, "0.80":23, "1.00":35, "1.50":79, "1.60":90, "1.75":108, "2.00":140, "2.50":219, "3.00":315 };
+
+        function updateVknOptions(p) {
+            const sys = document.getElementById('sys' + p).value;
+            const vknSelect = document.getElementById('vkn' + p);
+            const sgsInput = document.getElementById('sgs' + p);
+            if (sys === 'YES') {
+                vknSelect.innerHTML = '<option value="3.00">3.00 (ETSL)</option>';
+                sgsInput.value = 250;
+            } else {
+                let options = '<option value="">-- เลือกความเร็ว VKN --</option>';
+                for (let v in sgsTable) { options += `<option value="${v}">${v}</option>`; }
+                vknSelect.innerHTML = options;
+                sgsInput.value = "";
+            }
+        }
+
+        function updateSgsValue(p) {
+            const sys = document.getElementById('sys' + p).value;
+            const vkn = document.getElementById('vkn' + p).value;
+            const sgsInput = document.getElementById('sgs' + p);
+            if (sys === 'YES') { sgsInput.value = 250; } 
+            else { sgsInput.value = sgsTable[vkn] || ""; }
+        }
+
+        function openPop(num, isPass, criteria) {
+            const popNum = document.getElementById('popNum');
+            const popStatus = document.getElementById('popStatus');
+            popNum.innerText = num;
+            popNum.style.color = isPass ? 'var(--status-pass-bg)' : 'var(--status-fail-bg)';
+            popStatus.innerText = isPass ? `✅ ผ่าน Pass (${criteria})` : "❌ ไม่ผ่าน Fail ";
+            popStatus.style.color = isPass ? 'var(--status-pass-bg)' : 'var(--status-fail-bg)';
+            document.getElementById('popModal').style.display = 'flex';
+        }
+
+        function closePop() { document.getElementById('popModal').style.display = 'none'; }
+
+        function runCalc1() {
+            const sVal = parseFloat(document.getElementById('sgs1').value);
+            const hkp = parseFloat(document.getElementById('hkp1').value);
+            const hphk = parseFloat(document.getElementById('hphk1').value);
+            const act = parseFloat(document.getElementById('act1').value);
+
+            if (isNaN(sVal) || isNaN(hkp) || isNaN(hphk) || isNaN(act)) {
+                alert('กรุณากรอกข้อมูลส่วนบนให้ครบถ้วน'); return;
+            }
+
+            const totalZ = sVal + hkp + hphk;
+            const diff = act - totalZ;
+            const isPass = diff >= 0;
+
+            const numDisplay = document.getElementById('num1');
+            numDisplay.innerText = diff.toFixed(1);
+            numDisplay.style.fontSize = "45px";
+            
+            document.getElementById('formula1').style.display = "block";
+            document.getElementById('disp1').className = "value-display " + (isPass ? "pass" : "fail");
+            document.getElementById('formula1').innerHTML = `Z (Safety) = ${sVal} + ${hkp} + ${hphk} = ${totalZ.toFixed(1)}<br>D2 - Z = ${act} - ${totalZ.toFixed(1)} = ${diff.toFixed(1)}`;
+            
+            document.getElementById('analysisSection1').style.display = isPass ? 'none' : 'block';
+            openPop(diff.toFixed(1), isPass, "D2-Z ≥ 0");
+        }
+
+        function analyzeD2() {
+            const sVal = parseFloat(document.getElementById('sgs1').value);
+            const hkp_now = parseFloat(document.getElementById('hkp1').value);
+            const hphk = parseFloat(document.getElementById('hphk1').value);
+            const d2_now = parseFloat(document.getElementById('act1').value);
+            const stm = parseFloat(document.getElementById('stm_len').value) || 0;
+            const h_min = parseFloat(document.getElementById('hkp_min1').value) || 0;
+
+            const z_needed = sVal + hkp_now + hphk;
+            const gap = z_needed - d2_now; 
+            
+            const anaBox = document.getElementById('ana1');
+            anaBox.style.display = "block";
+            anaBox.className = "analysis-display fail";
+
+            let html = `<b>ผลการวิเคราะห์วิธีแก้ไข (ขาดระยะ ${gap.toFixed(1)} mm):</b><br><hr style="border:0; border-top:1px solid rgba(255,255,255,0.3)">`;
+
+            if (stm > 100) {
+                const can_cut = stm - 100;
+                html += `• <b>วิธีที่ 1 (ตัดปลายสายพาน):</b> ปัจจุบันเหลือสายพาน ${stm} mm สามารถตัดเพิ่มได้สูงสุด ${can_cut.toFixed(1)} mm (ต้องเหลือไว้อย่างน้อย 100 mm)<br>`;
+            }
+
+            if (h_min > 0 && hkp_now > h_min) {
+                const can_reduce_hkp = hkp_now - h_min;
+                html += `• <b>วิธีที่ 2 (ปรับ HKP):</b> ปรับลด HKP ลงให้ใกล้ค่าน้อยที่สุดจากในแบบระบุ (${h_min} mm) จะช่วยเพิ่มระยะได้อีก ${can_reduce_hkp.toFixed(1)} mm<br>`;
+            }
+
+            const total_solution = (stm > 100 ? (stm-100) : 0) + (hkp_now > h_min ? (hkp_now - h_min) : 0);
+            if (total_solution >= gap) {
+                html += `<br><span style="color:#afffba">✅ <b>สรุป:</b> หากทำตามด้านบน จะได้ระยะคืนมา ${total_solution.toFixed(1)} mm ซึ่งเพียงพอต่อการแก้ไข</span>`;
+            } else {
+                html += `<br><span style="color:#ffb3b3">❌ <b>สรุป:</b> แก้ไขทุกวิธีแล้วยังขาดอีก ${(gap - total_solution).toFixed(1)} mm โปรดพิจารณาต่อพ่วงปลายรางหรือลดความเร็ว</span>`;
+            }
+            anaBox.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
